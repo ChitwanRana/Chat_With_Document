@@ -1,2 +1,4 @@
 /doc_retrieve
 /.env
+uploaded_documents/
+cpu_offload/

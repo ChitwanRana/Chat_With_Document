@@ -23,7 +23,7 @@ st.title("Chat With Document")
 
 # Initialize the ChatGroq model
 llm = ChatGroq(groq_api_key=groq_api_key, model_name="Llama3-8b-8192")
-
+    
 # Define the prompt template
 prompt = ChatPromptTemplate.from_template(
     """
@@ -61,7 +61,7 @@ def vector_embedding(uploaded_files):
             docs = loader.load()
             all_docs.extend(docs)
         
-        # Document processing
+
         st.session_state.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         st.session_state.final_documents = st.session_state.text_splitter.split_documents(all_docs)
         

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Offline PDF QA</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        .highlight { background: #e1f5fe; padding: 10px; margin-bottom: 20px; border-left: 5px solid #0288d1; }
+    </style>
+</head>
+<body>
+    <h2>📄 Offline PDF Chat App</h2>
+
+    {% if message %}
+        <div class="highlight">{{ message }}</div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data">
+        <h4>📤 Upload PDFs:</h4>
+        <input type="file" name="pdfs" multiple>
+        <button name="upload">Process Documents</button>
+    </form>
+
+    <hr>
+
+    <form method="POST">
+        <h4>💬 Ask a question:</h4>
+        <input type="text" name="question" style="width: 100%;" placeholder="Enter your question">
+        <button name="ask">Get Answer</button>
+    </form>
+
+    {% if answer %}
+        <hr>
+        <h3>✅ Answer</h3>
+        <p>{{ answer }}</p>
+
+        <h4>📚 Similar Documents:</h4>
+        {% for doc in docs %}
+            <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
+                {{ doc.page_content }}
+            </div>
+        {% endfor %}
+    {% endif %}
+</body>
+</html>

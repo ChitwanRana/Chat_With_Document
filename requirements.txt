@@ -9,3 +9,5 @@ langchain_google_genai
 python-dotenv
 pypdf
 langchain_huggingface
+sentencepiece
+ accelerate>=0.26.0
