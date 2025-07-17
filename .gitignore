@@ -2,3 +2,4 @@
 /.env
 uploaded_documents/
 cpu_offload/
+models/

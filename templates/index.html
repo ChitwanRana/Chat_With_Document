@@ -6,6 +6,15 @@
     <style>
         body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
         .highlight { background: #e1f5fe; padding: 10px; margin-bottom: 20px; border-left: 5px solid #0288d1; }
+        .loading-spinner {
+            animation: spin 2s linear infinite;
+            width: 24px;
+            height: 24px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -28,6 +37,16 @@
         <input type="text" name="question" style="width: 100%;" placeholder="Enter your question">
         <button name="ask">Get Answer</button>
     </form>
+
+    <div id="loading" style="display:none;">
+        <p><img src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/icons/arrow-repeat.svg" class="loading-spinner"> Thinking...</p>
+    </div>
+
+    <script>
+        document.querySelector('button[name="ask"]').addEventListener('click', function() {
+            document.getElementById('loading').style.display = 'block';
+        });
+    </script>
 
     {% if answer %}
         <hr>
