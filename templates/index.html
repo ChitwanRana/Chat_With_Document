@@ -5,49 +5,264 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat With Document</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .container { max-width: 800px; margin-top: 2rem; }
-        .context-box { max-height: 300px; overflow-y: auto; margin-top: 1rem; }
-        .loading { display: none; }
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #8b5cf6;
+            --accent-color: #c4b5fd;
+            --light-bg: #f9fafb;
+            --dark-text: #1f2937;
+            --light-text: #f3f4f6;
+            --border-radius: 0.5rem;
+            --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        body {
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .app-container {
+            max-width: 960px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            color: var(--primary-color);
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #6b7280;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            border: none;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            padding: 1rem;
+            color: var(--primary-color);
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+            border-radius: var(--border-radius);
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+            border-radius: var(--border-radius);
+            transition: all 0.2s ease;
+        }
+        
+        .btn-success:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+        
+        .form-control {
+            border-radius: var(--border-radius);
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+        }
+        
+        .form-control:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(196, 181, 253, 0.5);
+        }
+        
+        .alert {
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .context-box {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            background-color: #f9f9f9;
+            border-radius: var(--border-radius);
+            padding: 1rem;
+        }
+        
+        .context-snippet {
+            background-color: white;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: var(--border-radius);
+            border-left: 3px solid var(--accent-color);
+            font-size: 0.9rem;
+        }
+        
+        .loading {
+            display: none;
+        }
+        
+        #answer {
+            padding: 1rem;
+            background-color: #f0f9ff;
+            border-radius: var(--border-radius);
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .file-upload-wrapper {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+        
+        .file-upload-wrapper .form-control {
+            padding-right: 105px;
+        }
+        
+        .upload-status {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            background-color: #f0f9ff;
+        }
+        
+        .upload-status.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .btn-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            padding: 0.5rem 0;
+        }
+        
+        .btn-link:hover {
+            color: var(--secondary-color);
+        }
+        
+        .response-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .app-container {
+                margin: 1rem auto;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="mb-4">Chat With Document</h1>
+    <div class="app-container">
+        <div class="header">
+            <h1><i class="fas fa-book-reader me-2"></i>Chat With Document</h1>
+            <p>Upload your PDF documents and ask questions to get intelligent answers based on the content.</p>
+        </div>
         
         <!-- Flash messages -->
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-info">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        <div id="flash-messages">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
         
         <!-- File upload form -->
         <div class="card mb-4">
-            <div class="card-header">Upload Documents</div>
+            <div class="card-header">
+                <i class="fas fa-file-upload me-2"></i>Upload Documents
+            </div>
             <div class="card-body">
-                <form action="{{ url_for('upload_files') }}" method="post" enctype="multipart/form-data">
+                <form action="{{ url_for('upload_files') }}" method="post" enctype="multipart/form-data" id="uploadForm">
                     <div class="mb-3">
                         <label for="fileInput" class="form-label">Upload PDF files</label>
-                        <input class="form-control" type="file" id="fileInput" name="files[]" multiple accept=".pdf">
+                        <div class="file-upload-wrapper">
+                            <input class="form-control" type="file" id="fileInput" name="files[]" multiple accept=".pdf">
+                        </div>
+                        <small class="text-muted">You can select multiple PDF files at once.</small>
                     </div>
-                    <button type="submit" class="btn btn-primary">Process Documents</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-cogs me-2"></i>Process Documents
+                    </button>
                 </form>
+                <div class="upload-status" id="uploadStatus">
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                    </div>
+                    <p>Processing your documents. This may take a few moments...</p>
+                </div>
             </div>
         </div>
         
         <!-- Query form -->
         <div class="card mb-4">
-            <div class="card-header">Ask Questions</div>
+            <div class="card-header">
+                <i class="fas fa-question-circle me-2"></i>Ask Questions
+            </div>
             <div class="card-body">
                 <form id="queryForm">
                     <div class="mb-3">
-                        <label for="queryInput" class="form-label">Enter your question</label>
-                        <input type="text" class="form-control" id="queryInput" name="query" required>
+                        <label for="queryInput" class="form-label">Enter your question about the document</label>
+                        <input type="text" class="form-control" id="queryInput" name="query" required 
+                               placeholder="e.g., What are the main topics covered in this document?">
                     </div>
-                    <button type="submit" class="btn btn-success">Ask</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-paper-plane me-2"></i>Ask
+                    </button>
                     <div class="spinner-border text-primary loading mt-3" role="status" id="loadingSpinner">
                         <span class="visually-hidden">Loading...</span>
                     </div>
@@ -58,18 +273,24 @@
         <!-- Results -->
         <div id="results" style="display: none;">
             <div class="card mb-4">
-                <div class="card-header">Answer</div>
+                <div class="card-header">
+                    <i class="fas fa-robot me-2"></i>Answer
+                </div>
                 <div class="card-body">
-                    <p id="answer"></p>
-                    <small class="text-muted">Response time: <span id="responseTime"></span> seconds</small>
+                    <div id="answer"></div>
+                    <div class="response-meta">
+                        <span>Response time: <span id="responseTime"></span> seconds</span>
+                        <span><i class="fas fa-lightbulb me-1"></i>AI-generated response</span>
+                    </div>
                 </div>
             </div>
             
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <button class="btn btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#contextCollapse">
-                        Document Context
+                        <i class="fas fa-file-alt me-2"></i>Document Context
                     </button>
+                    <small class="text-muted">Click to expand</small>
                 </div>
                 <div id="contextCollapse" class="collapse">
                     <div class="card-body context-box" id="contextContent"></div>
@@ -80,6 +301,11 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Show loading indicator during file upload
+        document.getElementById('uploadForm').addEventListener('submit', function() {
+            document.getElementById('uploadStatus').classList.add('active');
+        });
+        
         document.getElementById('queryForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -121,13 +347,16 @@
                 if (data.context_snippets && data.context_snippets.length > 0) {
                     data.context_snippets.forEach(snippet => {
                         const snippetDiv = document.createElement('div');
-                        snippetDiv.className = 'mb-3 p-2 border-bottom';
+                        snippetDiv.className = 'context-snippet';
                         snippetDiv.textContent = snippet;
                         contextContent.appendChild(snippetDiv);
                     });
                 } else {
                     contextContent.textContent = 'No context snippets available.';
                 }
+                
+                // Auto-scroll to results
+                results.scrollIntoView({ behavior: 'smooth' });
             })
             .catch(error => {
                 loadingSpinner.style.display = 'none';
