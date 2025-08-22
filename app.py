@@ -1,30 +1,42 @@
-import streamlit as st
+from flask import Flask, render_template, request, jsonify, flash, redirect, url_for, session
 import os
-from langchain_groq import ChatGroq
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.prompts import ChatPromptTemplate
-from langchain.chains import create_retrieval_chain
-from langchain_community.vectorstores import FAISS
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from dotenv import load_dotenv
+from langchain_groq import ChatGroq #type:ignore
+from langchain.text_splitter import RecursiveCharacterTextSplitter #type:ignore
+from langchain.chains.combine_documents import create_stuff_documents_chain #type:ignore
+from langchain_core.prompts import ChatPromptTemplate #type:ignore
+from langchain.chains import create_retrieval_chain #type:ignore
+from langchain_community.vectorstores import FAISS #type:ignore
+from langchain_community.document_loaders import PyPDFLoader #type:ignore
+from langchain_google_genai import GoogleGenerativeAIEmbeddings #type:ignore
+from dotenv import load_dotenv #type:ignore
 import time
-from io import BytesIO
+from werkzeug.utils import secure_filename
+import uuid
 
 # Load environment variables
 load_dotenv()
 
+# Configuration
+UPLOAD_FOLDER = 'uploaded_documents'
+ALLOWED_EXTENSIONS = {'pdf'}
+
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
+app.secret_key = os.getenv('SECRET_KEY', str(uuid.uuid4()))
+
+# Ensure upload directory exists
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+# Initialize API keys
 groq_api_key = os.getenv('GROQ_API_KEY')
 os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
 
-# App title
-st.title("Chat With Document")
-
-# Initialize the ChatGroq model
+# Initialize LLM
 llm = ChatGroq(groq_api_key=groq_api_key, model_name="Llama3-8b-8192")
-    
-# Define the prompt template
+
+# Define prompt template
 prompt = ChatPromptTemplate.from_template(
     """
     Answer the questions based on the provided context only.
@@ -36,66 +48,97 @@ prompt = ChatPromptTemplate.from_template(
     """
 )
 
-# Define the vector embedding function
-def vector_embedding(uploaded_files):
-    if "vectors" not in st.session_state:
-        st.session_state.embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-        
-        # Directory for storing uploaded files
-        save_dir = "uploaded_documents"
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        
-        # Load documents from uploaded files and save them to the server
-        all_docs = []
-        for uploaded_file in uploaded_files:
-            file_bytes = uploaded_file.read()
-            
-            # Save to the backend directory
-            file_path = os.path.join(save_dir, uploaded_file.name)
-            with open(file_path, "wb") as f:
-                f.write(file_bytes)
+# Helper function to check if file extension is allowed
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Process uploaded files and create vector embeddings
+def process_documents(files):
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    
+    # Load documents from uploaded files
+    all_docs = []
+    for file in files:
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
             
             # Load document using PyPDFLoader
-            loader = PyPDFLoader(file_path)
+            loader = PyPDFLoader(filepath)
             docs = loader.load()
             all_docs.extend(docs)
-        
-
-        st.session_state.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        st.session_state.final_documents = st.session_state.text_splitter.split_documents(all_docs)
-        
-        # Create vector store
-        st.session_state.vectors = FAISS.from_documents(st.session_state.final_documents, st.session_state.embeddings)
-
-# File uploader for PDFs
-uploaded_files = st.file_uploader("Upload PDF files", type=["pdf"], accept_multiple_files=True)
-
-if st.button("Process Documents"):
-    if uploaded_files:
-        vector_embedding(uploaded_files)
-        st.success("Vector Store DB is ready.")
-    else:
-        st.error("Please upload at least one PDF file.")
-
-# Question input and retrieval
-prompt1 = st.text_input("Enter Your Question From Documents")
-
-if prompt1 and "vectors" in st.session_state:
-    document_chain = create_stuff_documents_chain(llm, prompt)
-    retriever = st.session_state.vectors.as_retriever()
-    retrieval_chain = create_retrieval_chain(retriever, document_chain)
-
-    # Measure response time
-    start = time.process_time()
-    response = retrieval_chain.invoke({'input': prompt1})
-    st.write("Response time:", time.process_time() - start)
     
-    # Display the response
-    st.write(response['answer'])
+    # Split documents
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    final_documents = text_splitter.split_documents(all_docs)
+    
+    # Create vector store
+    vectors = FAISS.from_documents(final_documents, embeddings)
+    return vectors
 
-    # Display document similarity search results
-    with st.expander("Document Similarity Search"):
-        for i, doc in enumerate(response["context"]):
-            st.write(doc.page_content)
-            st.write("--------------------------------")
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/upload', methods=['POST'])
+def upload_files():
+    if 'files[]' not in request.files:
+        flash('No file part')
+        return redirect(request.url)
+    
+    files = request.files.getlist('files[]')
+    
+    if not files or files[0].filename == '':
+        flash('No selected file')
+        return redirect(request.url)
+    
+    try:
+        vectors = process_documents(files)
+        # Save vectors to session (Note: this is simplified, you'll need a proper storage solution)
+        session['has_vectors'] = True
+        # In a real app, you'd save the vectors to disk/database with a session ID
+        # For this example, we'll use a global variable (not suitable for production)
+        app.config['vectors'] = vectors
+        flash('Documents processed successfully!')
+    except Exception as e:
+        flash(f'Error processing documents: {str(e)}')
+    
+    return redirect(url_for('index'))
+
+@app.route('/query', methods=['POST'])
+def query_documents():
+    if not session.get('has_vectors', False):
+        return jsonify({'error': 'No documents have been processed yet'})
+    
+    query = request.form.get('query')
+    if not query:
+        return jsonify({'error': 'No query provided'})
+    
+    try:
+        # Retrieve vectors
+        vectors = app.config.get('vectors')
+        
+        # Create document chain and retriever
+        document_chain = create_stuff_documents_chain(llm, prompt)
+        retriever = vectors.as_retriever()
+        retrieval_chain = create_retrieval_chain(retriever, document_chain)
+        
+        # Measure response time
+        start = time.process_time()
+        response = retrieval_chain.invoke({'input': query})
+        response_time = time.process_time() - start
+        
+        # Extract context snippets
+        context_snippets = [doc.page_content for doc in response.get("context", [])]
+        
+        return jsonify({
+            'answer': response['answer'],
+            'response_time': response_time,
+            'context_snippets': context_snippets
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+if __name__ == '__main__':
+    app.run(debug=True)
